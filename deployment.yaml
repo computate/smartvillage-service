@@ -1,0 +1,85 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: smartvillage-service
+  namespace: smartvillage
+  labels:
+    app: smartvillage-service
+    app.kubernetes.io/component: smartvillage-service
+    app.kubernetes.io/instance: smartvillage-service
+    app.kubernetes.io/name: smartvillage-service
+    app.kubernetes.io/part-of: smartvillage-service
+    app.openshift.io/runtime: python
+    app.openshift.io/runtime-namespace: christophertate-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smartvillage-service
+  template:
+    metadata:
+      labels:
+        app: smartvillage-service
+        deployment: smartvillage-service
+    spec:
+      containers:
+        - name: smartvillage-service
+          image: quay.io/computate/smartvillage-service:main
+          resources:
+            limits:
+              cpu: 500m
+              memory: 500Mi
+            requests:
+              cpu: 100m
+              memory: 200Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          terminationMessagePath: /dev/termination-log
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          env:
+            - name: MAP_SERVER_URL
+              value: >-
+                https://www.smartabyarsmartvillage.org
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: smartvillage
+                  key: CLIENT_ID
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: smartvillage
+                  key: CLIENT_SECRET
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          imagePullPolicy: IfNotPresent
+          terminationMessagePolicy: File
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      schedulerName: default-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+
